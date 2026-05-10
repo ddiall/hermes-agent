@@ -7178,11 +7178,8 @@ def _cmd_update_impl(args, gateway_mode: bool):
         if commit_count == 0:
             _invalidate_update_cache()
 
-            # Fork users: check if upstream has new commits even though
-            # we're current with origin.  The normal upstream-sync call
-            # only runs after a pull, but if origin already matches HEAD
-            # we skip the pull entirely and miss the sync.
-            if is_fork:
+            # Even if origin is up to date, the fork may be behind upstream
+            if is_fork and branch == "main":
                 _sync_with_upstream_if_needed(git_cmd, PROJECT_ROOT)
 
             # Restore stash and switch back to original branch if we moved
