@@ -10595,6 +10595,30 @@ class HermesCLI:
         except Exception:
             pass
 
+        # Patch: add CSI u (Kitty keyboard protocol) mappings that
+        # prompt_toolkit 3.0.x doesn't ship.  Modern terminals (Windows
+        # Terminal ≥1.22, Ghostty, WezTerm, Kitty) negotiate the CSI u
+        # protocol and send these sequences instead of legacy VTxxx or raw
+        # control-byte encodings.  Without them, Ctrl+Backspace leaks
+        # literal "[127;5u" into the prompt and Ctrl+Delete leaks
+        # "[3;5u" — both because the Vt100Parser can't match the
+        # sequences and falls through to character-at-a-time emission.
+        try:
+            _ansi_seqs = ANSI_SEQUENCES
+            # Ctrl+Backspace via CSI u:  \x1b[127;5u
+            #   key=127 (Backspace), mod=5 (Ctrl).  Map to the same
+            #   key as plain Backspace to suppress the garbled-output
+            #   regression.  Full word-delete binding on CSI u
+            #   requires a distinct Keys.ControlBackspace enum which
+            #   prompt_toolkit doesn't expose.
+            _ansi_seqs['\x1b[127;5u'] = Keys.ControlH
+            # Ctrl+Delete via CSI u:  \x1b[3;5u
+            #   key=3 (Delete), mod=5 (Ctrl).  Maps naturally to the
+            #   existing Keys.ControlDelete.
+            _ansi_seqs['\x1b[3;5u'] = Keys.ControlDelete
+        except Exception:
+            pass
+
         @kb.add('\x08', eager=True)
         def handle_ctrl_backspace(event):
             """Ctrl+Backspace (0x08): delete word backward."""
